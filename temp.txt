@@ -1,0 +1,45 @@
+```javascript
+//model.js
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+function dynamicModel(user_id) {
+  var schema = new Schema({
+    //define your schema here
+  });
+  return mongoose.model(user_id, schema);
+}
+module.exports = dynamicModel;
+```
+
+Then, you can use this function in your app.js file like this:
+
+```javascript
+//app.js
+var mongoose = require('mongoose');
+var dynamicModel = require('./model.js');
+
+mongoose.connect('mongodb://localhost/test');
+
+//create a user ID variable
+var user_id = 'user123';
+
+//get the dynamic model for that user ID
+var UserCollection = dynamicModel(user_id);
+
+//create a new document for that user collection
+var userDoc = new UserCollection({
+  //fill in your document data here
+});
+
+//save the document to the database
+userDoc.save(function(err) {
+  if (err) {
+    console.error(err);
+  } else {
+    console.log('Document saved!');
+  }
+});
+```
+
+This way, you can create and save documents to different collections based on the user ID. I hope this helps!
