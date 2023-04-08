@@ -2,7 +2,7 @@ const Users = require('../models/credential');
 const dataSchema = require('../models/dataStructure')
 const wCollecSchema = require('../models/wordCollection')
 const mongoose = require('mongoose');
-
+const fetch = require("node-fetch");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -31,7 +31,7 @@ const jwt = require('jsonwebtoken');
 =========================================================================================================
 */
 
-const maxAge = 10 * 60
+const maxAge = 20 * 60
 function createToken(id){
     return jwt.sign({id}, process.env.JWT, {
         expiresIn: maxAge
@@ -69,7 +69,8 @@ module.exports.handleLogin = async (req, res) =>{
                                 email: response.email,
                                 folders: response.folders,
                                 categories: response.categories,
-                                notificationTurnedOn: response.notificationTurnedOn
+                                notificationTurnedOn: response.notificationTurnedOn,
+                                notificationFolder: response.notificationFolder
                             }
                             res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
@@ -104,7 +105,7 @@ module.exports.handleRegestration = (req, res) => {
     }); 
 }
 
-module.exports.subcribe = (req, res) =>{
+module.exports.subcribe = (req, res, next) =>{
     let {subscriptionURL, notif, id} =req.body;
     subscriptionURL = JSON.stringify(subscriptionURL);
     console.log(notif);
@@ -121,7 +122,7 @@ module.exports.subcribe = (req, res) =>{
                 console.log(error)
                 res.status(202).json({Status: "FAIL", message: "Failed to initiate notification"}).end();
             } else {
-                res.status(200).json({Status: "PASS", message: "Notification initiated successfully!"}).end();
+                next()
             }
         }
     )
@@ -132,6 +133,61 @@ module.exports.logout = (req, res) =>{
     res.json({status: "PASS", message: "Successfully logedout"}).end()
 }
 
+
+module.exports.updateNotificationFolder = async(req, res) => {
+    const { categoryName, id } = req.body;
+
+    if (mongoose.models[id]){
+            delete mongoose.models[id];
+        }
+    // Creates a copy of schema
+    let Schema = mongoose.model(id, dataSchema);
+
+    // will get all the meanings having category as the category extracted on line 169;
+    const result = await Schema.find({category: categoryName}).exec();
+
+    // Populating payload to send it to serverCharlie
+    const payload = {
+        category: categoryName,
+        id,
+        data: result
+    }
+    fetch(`${process.env.DOMAINOFCHARLIE}/updateData`,{ 
+        method: "POST",
+        headers:{
+            'Content-type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(resp => {
+        console.log(resp.status);
+        switch(resp.status){
+            case 201:
+                Users.findOneAndUpdate({_id: id}, 
+                    {
+                        $set: {
+                            notificationFolder: categoryName
+                        }
+                    })
+                .then(resp => {
+                    console.log("Shoudl be updated successfully")
+                    res.status(200).end();
+                })
+                .catch(err => {
+                    console.log(err);
+                    res.status(500).end();
+                })
+                break;
+            case 500:
+                res.status(500).end();
+                break;
+        }
+    })
+    .catch(err => {
+        console.log(err.message);
+        res.status(202).json({Status: "FAIL", message: "Failed to start notification service"}).end();
+    })
+}
 
 
 
@@ -161,6 +217,65 @@ module.exports.logout = (req, res) =>{
 =========================================================================================================
 */
 
+module.exports.TransferDataForInitiatingNotification = async (req, res) => {
+    console.log("initiating the trasfer...");
+    let {subscriptionURL, notif, id} =req.body;
+    
+    let response = await Users.findById(id, 'categories').exec();
+    if (response){
+        const category = response.categories[0];
+        if (mongoose.models[id]){
+            delete mongoose.models[id];
+        }
+    
+        // Creates a copy of schema
+        let Schema = mongoose.model(id, dataSchema);
+
+        // will get all the meanings having category as the category extracted on line 169;
+        const result = await Schema.find({category}).exec();
+
+        // will set the category in users account and then only it will proceed furthuer;
+        Users.findOneAndUpdate({_id: id}, {
+            $set:{
+                notificationFolder: category
+            }
+        }, (error, _) => {
+            if(error){
+                res.status(500).end();
+            } else {
+                payload = {
+                    id,
+                    subscriptionURL,
+                    category,
+                    data: result
+                }
+                fetch(`${process.env.DOMAINOFCHARLIE}/storeUserData`,{ 
+                    method: "POST",
+                    headers:{
+                        'Content-type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(resp => {
+                    switch(resp.status){
+                        case 200:
+                            res.status(200).end();
+                        case 400:
+                            console.log(resp.json());
+                            res.status(400).end();
+                    }
+                })
+                .catch(err => {
+                    console.log(err.message);
+                    res.status(202).json({Status: "FAIL", message: "Failed to start notification service"}).end();
+                })
+            }
+        });
+
+        
+    }
+}
+
 module.exports.getList = async (req, res, next) =>{
     let {page, limit, defaultFolder} = req.query;
     
@@ -188,7 +303,7 @@ module.exports.getList = async (req, res, next) =>{
 
 module.exports.add = async(req, res) => {
     const {word, tagName, folderName, meaning, pin, complete, id} = req.body;
-    // User defined function to get model for the perticular user
+
     if (mongoose.models[id]){
         delete mongoose.models[id];
     }
@@ -287,7 +402,6 @@ module.exports.getFolder = async (req, res, next) =>{
 
     // Creates a copy of schema
     let Schema = mongoose.model(id, dataSchema);
-    console.log(req.body);
     let result1 = await Schema.find(condition).skip(skip).limit(limit).sort({word: 1}).exec();
     // console.log(req.body);
     // return;

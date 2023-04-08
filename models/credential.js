@@ -1,38 +1,42 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const account = mongoose.Schema({
-    username:{
+const struct1 = {
         type: String,
         required: true,
         trim: true
-    },
-    password:{
-        type: String,
-        required: true,
-        trim: true
-    },newNotificationReceived:{
-        type: Boolean,
-        required: false,
-        default: false
-    },defaultFolder:{
+    }
+
+const struct2 = {
+        type: [String],
+        required: false
+    }
+const struct3 ={
         type: String,
         required: false,
         default:'EMPTY'
-    }, pinCount:{
+    }
+
+const account = mongoose.Schema({
+    username: struct1,
+    password:struct1
+    ,newNotificationReceived: {
+        type: Boolean,
+        required: false,
+        default: false
+    }
+    ,defaultFolder:struct3,
+    pinCount:{
         type: Number,
         required:false,
         default: 0
     }, email:{
         type: String,
         required: true,
-    }, categories:{
-        type: [String],
-        required: false
-    }, folders:{
-        type: [String],
-        required: false
-    }, notificationTurnedOn:{
+    },
+    categories:struct2,
+    folders:struct2
+    , notificationTurnedOn:{
         type: Boolean,
         required: false,
         default: false
@@ -40,7 +44,7 @@ const account = mongoose.Schema({
         type: String,
         required: false,
         default: "NULL"
-    }
+    }, notificationFolder: struct3
 })
 
 // fire a function before doc id saved to database
