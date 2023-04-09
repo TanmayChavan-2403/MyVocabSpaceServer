@@ -56,7 +56,7 @@ module.exports.handleLogin = async (req, res) =>{
                     bcrypt.compare(password, response.password, (err, result) =>{
                         console.log('[handlers.js line 58] Result after comparing password', result);
                         if (!result){
-                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 1000})
+                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 1000, SameSite:None})
                             res.json({status: "FAIL", message: 'Wrong password, please retry with correct password'}).end();
                         } else {
                             const token = createToken(response._id);
@@ -72,7 +72,7 @@ module.exports.handleLogin = async (req, res) =>{
                                 notificationTurnedOn: response.notificationTurnedOn,
                                 notificationFolder: response.notificationFolder
                             }
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000, SameSite=None});
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000, SameSite:None});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
