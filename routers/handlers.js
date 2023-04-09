@@ -72,7 +72,7 @@ module.exports.handleLogin = async (req, res) =>{
                                 notificationTurnedOn: response.notificationTurnedOn,
                                 notificationFolder: response.notificationFolder
                             }
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000});
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000, SameSite=None});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
