@@ -7,7 +7,10 @@ const router = Router();
 router.get('/firstVisit', authenticate, helpers.handleLogin)
 router.post('/login', helpers.handleLogin);
 router.post('/register', helpers.handleRegestration)
-router.post('/subscribe', authenticate, helpers.subcribe, helpers.TransferDataForInitiatingNotification)
+
+// To start or stop notification service for that user.
+router.post('/subscribe', authenticate, helpers.updateSubscriptionStatus)
+
 router.post('/updateNotificationFolder', authenticate, helpers.updateNotificationFolder)
 
 module.exports = router;

@@ -1,10 +1,12 @@
 const Users = require('../models/credential');
+const Notification = require('../models/notification')
 const dataSchema = require('../models/dataStructure')
 const wCollecSchema = require('../models/wordCollection')
 const mongoose = require('mongoose');
 const fetch = require("node-fetch");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { json } = require('express');
 
 
 /* 
@@ -94,10 +96,16 @@ module.exports.handleRegestration = (req, res) => {
 
     userSchema.save( async function (error){
         if (error){
-            res.json({status: "FAIL", response: error}).end()
+            if (error.message.includes("data and salt arguments required")){
+                res.status(500).json({message: "data and salt arguments required"}).end()
+            } else if (error.message.includes("Invalid salt")){
+                res.status(500).json({message: "Invalid salt. Salt must be in the form of: $Vers$log2(NumRounds)$saltvalue"}).end()
+            } else {
+                res.status(400).json({message: error}).end()
+            }
         } else {
             const token = createToken(userSchema._id);
-            res.json({status: "PASS", access_token: userSchema._id, token});
+            res.status(200).json({status: "PASS", access_token: userSchema._id, token});
             
             // Generating a collection with the username
             const sch = mongoose.model(generateCollectionName(userSchema), dataSchema)
@@ -105,10 +113,9 @@ module.exports.handleRegestration = (req, res) => {
     }); 
 }
 
-module.exports.subcribe = (req, res, next) =>{
+module.exports.updateSubscriptionStatus = (req, res, next) =>{
     let {subscriptionURL, notif, id} =req.body;
     subscriptionURL = JSON.stringify(subscriptionURL);
-    console.log(notif);
     Users.findOneAndUpdate(
         {_id: id},
         {
@@ -119,10 +126,42 @@ module.exports.subcribe = (req, res, next) =>{
         },
         (error, resp) => {
             if(error){
-                console.log(error)
-                res.status(202).json({Status: "FAIL", message: "Failed to initiate notification"}).end();
+                res.status(202).json({status: "FAIL", message: "Failed to update notification service"}).end();
             } else {
-                next()
+                // if the vaiables for the particular user was update successfully then now checking 
+                // if user was subscribing or unsubscribing from the notification service, 
+                if (notif){
+                    // if user was subscribing then we will create a new document in 'Notificaiton' collection .
+                    const notif = Notification({
+                        _id: id,
+                        firstRevision: [],
+                        secondRevision: [],
+                        date_created: new Date().toJSON()
+                    })
+                    notif.save()
+                    .then(doc => {
+                        // if the new document was created successfully!
+                        res.status(200).json({status: "Pass", message: "Subscribed Successfully! " }).end();
+                    })
+                    .catch(err => {
+                        // If the new document creation process failed then we will also change the variabels
+                        // in the 'credentials' collection to revert the database back to its original state.
+                        Users.findOneAndUpdate({_id: id},{$set:{subscriptionURL: "",notificationTurnedOn: false}},() => {})
+                        res.status(202).json({status: "FAIL", message: "Failed to initiate notification"}).end();
+                    })
+                } else {
+                    // unsubscribing the notification feature and deleting the document from the 
+                    // 'Notification' collection.
+                    Notification.deleteOne({_id: id},(err, result) => {
+                        if (err){
+                            // if failed to delete the document from 'Notification' collection
+                            res.status(202).json({status: "FAIL", message: "Failed to unsubscribe notification service"}).end();
+                        } else {
+                            // if the document was deleted from 'Notification' collection
+                            res.status(200).json({status: "Pass", message: "Unsubscribed Successfully! " }).end();
+                        }
+                    })
+                }
             }
         }
     )
@@ -440,6 +479,23 @@ module.exports.updateSuppDetails = (req, res) => {
     )
 }
 
+module.exports.updateNotificationList = (req, res) => {
+    fetch(process.env.NOTIF_SERVER + "addSchedule", {
+        method: "POST",
+        headers: {
+            'Content-type': "application/json"
+        },
+        body: JSON.stringify(req.body)
+    })
+    .then(resp => {
+        if (resp.status == 200){
+            console.log("Notification list updated successfully!")
+        } else{
+            console.log("Something went wrong", resp)
+        }
+        res.status(200).json({resp}).end()
+    })
+}
 
 function generateTagName(folderName, length=5){
     if (folderName != "mix"){
@@ -448,6 +504,7 @@ function generateTagName(folderName, length=5){
     };
     return folderName;
 }
+
 
 
 

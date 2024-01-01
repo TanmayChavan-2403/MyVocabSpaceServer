@@ -12,6 +12,6 @@ router.post('/udpateSuppDetails', authenticate, helpers.updateSuppDetails);
 router.delete('/deleteData', authenticate, helpers.delete);
 router.get('/logout', authenticate, helpers.logout)
 router.get('/getList', authenticate ,helpers.getList, helpers.getFolder);
-
+router.post('/addNotificationSlot', authenticate, helpers.updateNotificationList)
 
 module.exports = router;
