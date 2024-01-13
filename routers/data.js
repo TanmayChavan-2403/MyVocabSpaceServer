@@ -12,6 +12,8 @@ router.post('/udpateSuppDetails', authenticate, helpers.updateSuppDetails);
 router.delete('/deleteData', authenticate, helpers.delete);
 router.get('/logout', authenticate, helpers.logout)
 router.get('/getList', authenticate ,helpers.getList, helpers.getFolder);
+
+// used to add notification to cron-job.org website
 router.post('/addNotificationSlot', authenticate, helpers.updateNotificationList)
 
 module.exports = router;

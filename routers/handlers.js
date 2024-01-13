@@ -1,5 +1,5 @@
 const Users = require('../models/credential');
-const Notification = require('../models/notification')
+const notificationSchema = require('../models/notification')
 const dataSchema = require('../models/dataStructure')
 const wCollecSchema = require('../models/wordCollection')
 const mongoose = require('mongoose');
@@ -132,7 +132,7 @@ module.exports.updateSubscriptionStatus = (req, res, next) =>{
                 // if user was subscribing or unsubscribing from the notification service, 
                 if (notif){
                     // if user was subscribing then we will create a new document in 'Notificaiton' collection .
-                    const notif = Notification({
+                    const notif = notificationSchema({
                         _id: id,
                         firstRevision: [],
                         secondRevision: [],
@@ -152,7 +152,7 @@ module.exports.updateSubscriptionStatus = (req, res, next) =>{
                 } else {
                     // unsubscribing the notification feature and deleting the document from the 
                     // 'Notification' collection.
-                    Notification.deleteOne({_id: id},(err, result) => {
+                    notificationSchema.deleteOne({_id: id},(err, result) => {
                         if (err){
                             // if failed to delete the document from 'Notification' collection
                             res.status(202).json({status: "FAIL", message: "Failed to unsubscribe notification service"}).end();
@@ -341,7 +341,7 @@ module.exports.getList = async (req, res, next) =>{
 }
 
 module.exports.add = async(req, res) => {
-    const {word, tagName, folderName, meaning, pin, complete, id} = req.body;
+    const {word, tagName, folderName, meaning, pin, complete, notify, id} = req.body;
 
     if (mongoose.models[id]){
         delete mongoose.models[id];
@@ -358,12 +358,25 @@ module.exports.add = async(req, res) => {
         category: tagName,
         folderName: folderName
     });
-    database.save((error) => {
+    database.save( async (error) => {
             if (error){
                 res.json({status: "FAIL", message: error}).end()
             } else {
                 // Schema.collection.getIndexes({full: true}) [ RETURNS Promise so make sure handle it Atode. ]
-                res.json({status: "PASS", message: `Data added successfully!`}).end()
+                if (notify){
+                    if (mongoose.models[id]){
+                        delete mongoose.models[id];
+                    }
+                    
+                    const result = await notificationSchema.updateOne({_id: id}, {
+                        $push:{firstRevision: word}
+                    })
+                    if (result.modifiedCount == 1){
+                        res.json({status: "PASS", message: `Data added successfully!`}).end()
+                    } else {
+                        res.json({status: "PASS", message: `Data added successfully! But failed to add in notification`}).end()
+                    }
+                }
             }
         }
     )

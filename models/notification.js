@@ -9,6 +9,9 @@ const array = {
 const notifCollection = mongoose.Schema({
     firstRevision: array,
     secondRevision: array,
+    thirdRevision: array,
+    fourthRevision: array,
+    fifthRevision: array,
     date_created: {
         type: String,
         required: false
