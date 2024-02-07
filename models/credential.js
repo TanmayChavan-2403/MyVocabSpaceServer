@@ -44,7 +44,8 @@ const account = mongoose.Schema({
         type: String,
         required: false,
         default: "NULL"
-    }, notificationFolder: struct3
+    }, notificationFolder: struct3,
+    subscriptionHealthStatus: false
 })
 
 // fire a function before doc id saved to database

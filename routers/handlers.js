@@ -33,10 +33,10 @@ const { json } = require('express');
 =========================================================================================================
 */
 
-const maxAge = 20 * 60
+const maxAge = 120
 function createToken(id){
     return jwt.sign({id}, process.env.JWT, {
-        expiresIn: maxAge
+        expiresIn: 120
     })
 }
 
@@ -58,7 +58,7 @@ module.exports.handleLogin = async (req, res) =>{
                     bcrypt.compare(password, response.password, (err, result) =>{
                         console.log('[handlers.js line 58] Result after comparing password', result);
                         if (!result){
-                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 1000, sameSite:"none",  secure: true})
+                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
                             res.json({status: "FAIL", message: 'Wrong password, please retry with correct password'}).end();
                         } else {
                             const token = createToken(response._id);
@@ -72,9 +72,10 @@ module.exports.handleLogin = async (req, res) =>{
                                 folders: response.folders,
                                 categories: response.categories,
                                 notificationTurnedOn: response.notificationTurnedOn,
-                                notificationFolder: response.notificationFolder
+                                notificationFolder: response.notificationFolder,
+                                subscriptionHealthStatus: response.subscriptionHealthStatus
                             }
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge * 1000, sameSite:"none", secure: true});
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge, sameSite:"none", secure: true});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
@@ -134,8 +135,6 @@ module.exports.updateSubscriptionStatus = (req, res, next) =>{
                     // if user was subscribing then we will create a new document in 'Notificaiton' collection .
                     const notif = notificationSchema({
                         _id: id,
-                        firstRevision: [],
-                        secondRevision: [],
                         date_created: new Date().toJSON()
                     })
                     notif.save()
@@ -367,9 +366,9 @@ module.exports.add = async(req, res) => {
                     if (mongoose.models[id]){
                         delete mongoose.models[id];
                     }
-                    
+                    // Adding the word in the first revision array 
                     const result = await notificationSchema.updateOne({_id: id}, {
-                        $push:{firstRevision: word}
+                        $push:{firstRevision: {[word]: meaning}}
                     })
                     if (result.modifiedCount == 1){
                         res.json({status: "PASS", message: `Data added successfully!`}).end()
@@ -475,7 +474,6 @@ module.exports.getFolder = async (req, res, next) =>{
 
 module.exports.updateSuppDetails = (req, res) => {
     const {field, newValue ,id} = req.body;
-    console.log(req.body);
     Users.findOneAndUpdate(
         {_id: id},
         {
@@ -501,12 +499,27 @@ module.exports.updateNotificationList = (req, res) => {
         body: JSON.stringify(req.body)
     })
     .then(resp => {
+        console.log(resp.status)
         if (resp.status == 200){
-            console.log("Notification list updated successfully!")
+            return resp.json()
         } else{
-            console.log("Something went wrong", resp)
+            res.status(resp.status).end()
         }
-        res.status(200).json({resp}).end()
+    }).then(data => {
+        notificationSchema.findOneAndUpdate(
+            {_id: req.body.id},
+            {
+                $push:{
+                    "jobIds": data.jobId
+                }
+            }, (error, data) => {
+                if(error){
+                    res.status(509).end()
+                } else {
+                    res.status(200).end()
+                }
+            }
+        )
     })
 }
 

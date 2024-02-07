@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const array = {
-    type: [String],
+    type: [Object],
     required: false
 }
 
@@ -12,6 +12,7 @@ const notifCollection = mongoose.Schema({
     thirdRevision: array,
     fourthRevision: array,
     fifthRevision: array,
+    jobIds: array,
     date_created: {
         type: String,
         required: false
