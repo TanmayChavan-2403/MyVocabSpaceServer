@@ -33,10 +33,9 @@ const { json } = require('express');
 =========================================================================================================
 */
 
-const maxAge = 1200 * 1000
 function createToken(id){
     return jwt.sign({id}, process.env.JWT, {
-        expiresIn: 120
+        expiresIn: 120 * 1000
     })
 }
 
@@ -75,7 +74,7 @@ module.exports.handleLogin = async (req, res) =>{
                                 notificationFolder: response.notificationFolder,
                                 subscriptionHealthStatus: response.subscriptionHealthStatus
                             }
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: maxAge, sameSite:"none", secure: true});
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: 120 * 1000, sameSite:"none", secure: true});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
