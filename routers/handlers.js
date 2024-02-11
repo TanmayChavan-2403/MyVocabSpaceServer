@@ -33,7 +33,7 @@ const { json } = require('express');
 =========================================================================================================
 */
 
-const maxAge = 120
+const maxAge = 1200 * 1000
 function createToken(id){
     return jwt.sign({id}, process.env.JWT, {
         expiresIn: 120
