@@ -13,7 +13,7 @@ mongoose.pluralize(null);
 
 const app = express();
 app.use(express.json());
-app.use(cors({credentials: true, origin: ["http://localhost:3000", "https://myvocabspace.netlify.app"]}));
+app.use(cors({credentials: true, origin: ["http://localhost:3000", "https://myvocabspace.netlify.app", "https://myvocabspace.web.app"]}));
 app.use(cookieParser());    
 
 app.use(dataRouter);
