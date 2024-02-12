@@ -527,6 +527,39 @@ module.exports.updateNotificationList = (req, res) => {
     })
 }
 
+module.exports.fetchNotificationList = async (req, res) => {
+    console.log(ObjectId(req.body.id))
+    let result = await notificationSchema.aggregate([
+        {
+            $match: {
+                _id: req.body.id
+            }
+        },
+        {
+            $project: {
+                jobIds: 1
+            }
+        }
+    ])
+
+    console.log(result)
+    return 
+    fetch(process.env.NOTIF_SERVER + "fetchLists", {
+        method: "POST",
+        headers: {
+            'Content-type': "application/json"
+        },
+        body: JSON.stringify(req.body)
+    })
+    .then(resp => {
+        console.log(resp)
+        return resp.json();
+    })
+    .then(data => console.log(data))
+    .catch(err => console.log(err))
+}
+
+
 function generateTagName(folderName, length=5){
     if (folderName != "mix"){
         tag = folderName.slice(0, length);

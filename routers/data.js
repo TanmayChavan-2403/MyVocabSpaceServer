@@ -16,4 +16,6 @@ router.get('/getList', authenticate ,helpers.getList, helpers.getFolder);
 // used to add notification to cron-job.org website
 router.post('/addNotificationSlot', authenticate, helpers.updateNotificationList)
 
+// used to get the list of notification schedules of the user
+router.get('/fetchNotificationList', authenticate, helpers.fetchNotificationList)
 module.exports = router;
