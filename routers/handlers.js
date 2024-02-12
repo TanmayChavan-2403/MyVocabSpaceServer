@@ -520,6 +520,11 @@ module.exports.updateNotificationList = (req, res) => {
             }
         )
     })
+    .catch(error => {
+        if (error.code === 'ECONNREFUSED'){
+            res.status(503).end()
+        }
+    })
 }
 
 function generateTagName(folderName, length=5){
