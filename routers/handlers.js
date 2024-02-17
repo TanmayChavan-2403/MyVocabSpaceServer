@@ -528,7 +528,6 @@ module.exports.updateNotificationList = (req, res) => {
 }
 
 module.exports.fetchNotificationList = async (req, res) => {
-    console.log(ObjectId(req.body.id))
     let result = await notificationSchema.aggregate([
         {
             $match: {
