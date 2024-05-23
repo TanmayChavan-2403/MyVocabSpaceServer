@@ -16,6 +16,7 @@ function authenticate(req, res, next){
 			}
 		});
 	} else {
+		console.log('Failed to authorize....')
 		res.status(401).end();
 	}
 }

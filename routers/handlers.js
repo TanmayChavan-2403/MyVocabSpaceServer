@@ -7,7 +7,7 @@ const fetch = require("node-fetch");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { json } = require('express');
-
+const { ObjectId } = require('mongodb');
 
 /* 
 =========================================================================================================
@@ -341,6 +341,7 @@ module.exports.getList = async (req, res, next) =>{
 module.exports.add = async(req, res) => {
     const {word, tagName, folderName, meaning, pin, complete, notify, id} = req.body;
 
+    // To create new mongoose id
     if (mongoose.models[id]){
         delete mongoose.models[id];
     }
@@ -356,15 +357,15 @@ module.exports.add = async(req, res) => {
         category: tagName,
         folderName: folderName
     });
+    // database.save is used to save the data in the mongodb
     database.save( async (error) => {
             if (error){
                 res.json({status: "FAIL", message: error}).end()
             } else {
-                // Schema.collection.getIndexes({full: true}) [ RETURNS Promise so make sure handle it Atode. ]
+                // If the user have turned on the notification then we will add this word to 
+                // first revision array
                 if (notify){
-                    if (mongoose.models[id]){
-                        delete mongoose.models[id];
-                    }
+
                     // Adding the word in the first revision array 
                     const result = await notificationSchema.updateOne({_id: id}, {
                         $push:{firstRevision: {[word]: meaning}}
@@ -382,7 +383,8 @@ module.exports.add = async(req, res) => {
 
 module.exports.delete = async (req, res, next) =>{
     const {key, word, id} = req.body;
-   // User defined function to get model for the perticular user
+   
+    // User defined function to get model for the perticular user
     if (mongoose.models[id]){
         delete mongoose.models[id];
     }
@@ -509,7 +511,7 @@ module.exports.updateNotificationList = (req, res) => {
             {_id: req.body.id},
             {
                 $push:{
-                    "jobIds": data.jobId
+                    "jobIds": {[data.jobId]: data.title}
                 }
             }, (error, data) => {
                 if(error){
@@ -528,10 +530,11 @@ module.exports.updateNotificationList = (req, res) => {
 }
 
 module.exports.fetchNotificationList = async (req, res) => {
+    console.log("Fetching notification list....")
     let result = await notificationSchema.aggregate([
         {
             $match: {
-                _id: req.body.id
+                _id: ObjectId(req.body.id)
             }
         },
         {
@@ -540,22 +543,11 @@ module.exports.fetchNotificationList = async (req, res) => {
             }
         }
     ])
-
-    console.log(result)
-    return 
-    fetch(process.env.NOTIF_SERVER + "fetchLists", {
-        method: "POST",
-        headers: {
-            'Content-type': "application/json"
-        },
-        body: JSON.stringify(req.body)
-    })
-    .then(resp => {
-        console.log(resp)
-        return resp.json();
-    })
-    .then(data => console.log(data))
-    .catch(err => console.log(err))
+    if (result.length == 0){
+        res.status(204).end()
+    } else {
+        res.status(201).json({'payload': result[0]['jobIds']})
+    }
 }
 
 

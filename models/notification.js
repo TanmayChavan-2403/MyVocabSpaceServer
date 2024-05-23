@@ -12,7 +12,10 @@ const notifCollection = mongoose.Schema({
     thirdRevision: array,
     fourthRevision: array,
     fifthRevision: array,
-    jobIds: array,
+    jobIds: {
+        type: Object,
+        required: false
+    },
     date_created: {
         type: String,
         required: false
