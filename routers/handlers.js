@@ -35,7 +35,7 @@ const { ObjectId } = require('mongodb');
 
 function createToken(id){
     return jwt.sign({id}, process.env.JWT, {
-        expiresIn: 120 * 1000
+        expiresIn: 604800000 // 1 week
     })
 }
 
@@ -74,7 +74,8 @@ module.exports.handleLogin = async (req, res) =>{
                                 notificationFolder: response.notificationFolder,
                                 subscriptionHealthStatus: response.subscriptionHealthStatus
                             }
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: 120 * 1000, sameSite:"none", secure: true});
+                            // The cookie is set to expire after 1 week.
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: 604800000, sameSite:"none", secure: true});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
@@ -546,7 +547,7 @@ module.exports.fetchNotificationList = async (req, res) => {
     if (result.length == 0){
         res.status(204).end()
     } else {
-        res.status(201).json({'payload': result[0]['jobIds']})
+        res.status(201).json({'payload': result[0]['jobIds'] || []})
     }
 }
 
