@@ -4,7 +4,7 @@ const authenticate = require('../middlewares/authenticate');
 
 const router = Router();
 
-router.get('/firstVisit', authenticate, helpers.handleLogin)
+router.get('/firstVisit', authenticate, helpers.handleFirstVisit)
 router.post('/login', helpers.handleLogin);
 router.post('/register', helpers.handleRegestration)
 

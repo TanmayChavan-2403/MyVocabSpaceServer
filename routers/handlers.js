@@ -45,6 +45,31 @@ function generateCollectionName(userSchema){
     return result;
 }
 
+module.exports.handleFirstVisit = (req, res) => {
+    Users.findOne(
+        {_id: req.body.id},
+        (error, response) => {
+            if (error){
+                res.status(401).end();
+            } else {
+                let payload = {
+                    defaultFolder: response.defaultFolder,
+                    newNotificationReceived: response.newNotificationReceived,
+                    pinCount: response.pinCount,
+                    username: response.username,
+                    email: response.email,
+                    folders: response.folders,
+                    categories: response.categories,
+                    notificationTurnedOn: response.notificationTurnedOn,
+                    notificationFolder: response.notificationFolder,
+                    subscriptionHealthStatus: response.subscriptionHealthStatus
+                }
+                res.status(202).json({status: "PASS", message: 'Logged in successfully!', payload}).end();
+            }
+        }
+    )    
+}
+
 module.exports.handleLogin = async (req, res) =>{
     const {username, password} = req.body;
     Users.findOne(
@@ -55,10 +80,9 @@ module.exports.handleLogin = async (req, res) =>{
             } else{
                 if (response){
                     bcrypt.compare(password, response.password, (err, result) =>{
-                        console.log('[handlers.js line 58] Result after comparing password', result);
                         if (!result){
-                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
-                            res.json({status: "FAIL", message: 'Wrong password, please retry with correct password'}).end();
+                            // res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
+                            res.json({status: "FAIL", message: 'Incorrect credentials, please retry'}).end();
                         } else {
                             const token = createToken(response._id);
                             //  MAIN response object is altered here.
@@ -198,7 +222,6 @@ module.exports.updateNotificationFolder = async(req, res) => {
         body: JSON.stringify(payload)
     })
     .then(resp => {
-        console.log(resp.status);
         switch(resp.status){
             case 201:
                 Users.findOneAndUpdate({_id: id}, 
@@ -208,11 +231,9 @@ module.exports.updateNotificationFolder = async(req, res) => {
                         }
                     })
                 .then(resp => {
-                    console.log("Shoudl be updated successfully")
                     res.status(200).end();
                 })
                 .catch(err => {
-                    console.log(err);
                     res.status(500).end();
                 })
                 break;
@@ -222,7 +243,6 @@ module.exports.updateNotificationFolder = async(req, res) => {
         }
     })
     .catch(err => {
-        console.log(err.message);
         res.status(202).json({Status: "FAIL", message: "Failed to start notification service"}).end();
     })
 }
@@ -256,7 +276,6 @@ module.exports.updateNotificationFolder = async(req, res) => {
 */
 
 module.exports.TransferDataForInitiatingNotification = async (req, res) => {
-    console.log("initiating the trasfer...");
     let {subscriptionURL, notif, id} =req.body;
     
     let response = await Users.findById(id, 'categories').exec();
@@ -299,12 +318,10 @@ module.exports.TransferDataForInitiatingNotification = async (req, res) => {
                         case 200:
                             res.status(200).end();
                         case 400:
-                            console.log(resp.json());
                             res.status(400).end();
                     }
                 })
                 .catch(err => {
-                    console.log(err.message);
                     res.status(202).json({Status: "FAIL", message: "Failed to start notification service"}).end();
                 })
             }
@@ -316,6 +333,7 @@ module.exports.TransferDataForInitiatingNotification = async (req, res) => {
 
 module.exports.getList = async (req, res, next) =>{
     let {page, limit, defaultFolder} = req.query;
+    console.log("Getting data as ", req.query)
     
     if (page == 0){
         condition = {isPinned: true, folderName: defaultFolder};
@@ -408,7 +426,6 @@ module.exports.update = async (req, res, next) =>{
     if (mongoose.models[id]){
         delete mongoose.models[id];
     }
-    console.log(req.body);
     // Creates a copy of schema
     let Schema = mongoose.model(id, dataSchema);
 
@@ -426,8 +443,6 @@ module.exports.update = async (req, res, next) =>{
         }
 
     )
-
-    console.log("Executing something...");
 }
 
 module.exports.find = async (req, res, next) =>{
@@ -456,7 +471,6 @@ module.exports.getFolder = async (req, res, next) =>{
     // Creates a copy of schema
     let Schema = mongoose.model(id, dataSchema);
     let result1 = await Schema.find(condition).skip(skip).limit(limit).sort({word: 1}).exec();
-    // console.log(req.body);
     // return;
     // This means either we don't have any data or we just don't have any pinned data which we fetch for first round/page;
     if (result1.length > 0){
@@ -467,7 +481,7 @@ module.exports.getFolder = async (req, res, next) =>{
      else {
         let result2 = await Schema.find({isPinned: false, folderName: defaultFolder}).skip(skip).limit(limit - result1.length).sort({word: 1}).exec();
         if (result2.length == 0){
-            res.status(200).json({status: 'FAIL', response: [] , resultCount: 0}).end();
+            res.status(204).end();
         } else {
             res.status(200).json({status: 'PASS', response: result2 , resultCount: result2.length}).end();
         }
@@ -501,7 +515,6 @@ module.exports.updateNotificationList = (req, res) => {
         body: JSON.stringify(req.body)
     })
     .then(resp => {
-        console.log(resp.status)
         if (resp.status == 200){
             return resp.json()
         } else{
@@ -531,7 +544,6 @@ module.exports.updateNotificationList = (req, res) => {
 }
 
 module.exports.fetchNotificationList = async (req, res) => {
-    console.log("Fetching notification list....")
     let result = await notificationSchema.aggregate([
         {
             $match: {
