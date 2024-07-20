@@ -8,7 +8,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { json } = require('express');
 const { ObjectId } = require('mongodb');
-
+const { log } = require('./logger')
 /* 
 =========================================================================================================
 <============================ MAKE USE OF MINI-MAP & HUGE SPACE FEATURE ==================================>
@@ -81,7 +81,7 @@ module.exports.handleLogin = async (req, res) =>{
                 if (response){
                     bcrypt.compare(password, response.password, (err, result) =>{
                         if (!result){
-                            // res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
+                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
                             res.json({status: "FAIL", message: 'Incorrect credentials, please retry'}).end();
                         } else {
                             const token = createToken(response._id);
@@ -572,7 +572,23 @@ function generateTagName(folderName, length=5){
     return folderName;
 }
 
-
+module.exports.deleteCronJob = (req, res) => {
+    console.log("Server 1...")
+    fetch(process.env.NOTIF_SERVER + "deleteJob", {
+        method: "DELETE",
+        headers: {
+            'Content-type': "application/json"
+        },
+        body: JSON.stringify(req.body)
+    })
+    .then(resp => {
+        res.sendStatus(resp.status).end();
+    })
+    .catch(err => {
+        log(err, req.body['id'])
+        res.sendStatus(500).end()
+    })
+}
 
 
 
