@@ -563,7 +563,6 @@ module.exports.fetchNotificationList = async (req, res) => {
     }
 }
 
-
 function generateTagName(folderName, length=5){
     if (folderName != "mix"){
         tag = folderName.slice(0, length);
@@ -573,7 +572,6 @@ function generateTagName(folderName, length=5){
 }
 
 module.exports.deleteCronJob = (req, res) => {
-    console.log("Server 1...")
     fetch(process.env.NOTIF_SERVER + "deleteJob", {
         method: "DELETE",
         headers: {
@@ -581,8 +579,20 @@ module.exports.deleteCronJob = (req, res) => {
         },
         body: JSON.stringify(req.body)
     })
-    .then(resp => {
-        res.sendStatus(resp.status).end();
+    .then(async (resp) => {
+        if (resp.status == 200 || resp.status == 404){
+            const response = await notificationSchema.update(
+                {_id: ObjectId(req.body.id)},
+                {
+                    $pull: {
+                        jobIds: {[req.body['jobid']]: {$exists: true}}
+                    }
+                }
+            )
+            res.sendStatus(200).end();
+        } else {
+            res.sendStatus(500).end();
+        }
     })
     .catch(err => {
         log(err, req.body['id'])
