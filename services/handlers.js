@@ -81,7 +81,7 @@ module.exports.handleLogin = async (req, res) =>{
                 if (response){
                     bcrypt.compare(password, response.password, (err, result) =>{
                         if (!result){
-                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, sameSite:"none",  secure: true})
+                            res.cookie('ningen', 'INVALID', {httpOnly: true, maxAge: 1 * 100, secure: true})
                             res.json({status: "FAIL", message: 'Incorrect credentials, please retry'}).end();
                         } else {
                             const token = createToken(response._id);
@@ -99,7 +99,7 @@ module.exports.handleLogin = async (req, res) =>{
                                 subscriptionHealthStatus: response.subscriptionHealthStatus
                             }
                             // The cookie is set to expire after 1 week.
-                            res.cookie('ningen', token, {httpOnly: true, maxAge: 604800000, sameSite:"none", secure: true});
+                            res.cookie('ningen', token, {httpOnly: true, maxAge: 604800000, secure: true});
                             res.json({status: "PASS", message: 'Logged in successfully!', payload}).end();
                         }
                     })
@@ -520,18 +520,18 @@ module.exports.updateNotificationList = (req, res) => {
         } else{
             res.status(resp.status).end()
         }
-    }).then(data => {
+    }).then(resp => {
         notificationSchema.findOneAndUpdate(
             {_id: req.body.id},
             {
                 $push:{
-                    "jobIds": {[data.jobId]: data.title}
+                    "jobIds": {[resp.jobId]: [resp.title, resp.time]}
                 }
             }, (error, data) => {
                 if(error){
                     res.status(509).end()
                 } else {
-                    res.status(200).end()
+                    res.status(200).json({"$": [resp.jobId, [resp.title, resp.time]]}).end()
                 }
             }
         )
